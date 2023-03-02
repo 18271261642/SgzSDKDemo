@@ -5,8 +5,7 @@ import com.blala.blalable.BleOperateManager;
 
 /**
  * Application
- * Created by Admin
- * Date 2023/2/3
+ *
  * @author Admin
  */
 public class BaseApplication extends BleApplication {
@@ -21,12 +20,14 @@ public class BaseApplication extends BleApplication {
     }
 
 
-    public static BaseApplication getBaseApplication(){
+    public static BaseApplication getBaseApplication() {
         return baseApplication;
     }
 
-    /**获取蓝牙数据操作类**/
-    public BleOperateManager getBleOperate(){
+    /**
+     * 获取蓝牙数据操作类
+     **/
+    public BleOperateManager getBleOperate() {
         return BleOperateManager.getInstance();
     }
 }

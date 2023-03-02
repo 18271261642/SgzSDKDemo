@@ -16,10 +16,13 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 
+import com.blala.blalable.BleOperateManager;
 import com.blala.blalable.BleSpUtils;
+import com.blala.blalable.listener.BleConnStatusListener;
 import com.blala.blalable.listener.ConnStatusListener;
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.XXPermissions;
+import com.inuker.bluetooth.library.Constants;
 import com.inuker.bluetooth.library.search.SearchResult;
 import com.inuker.bluetooth.library.search.response.SearchResponse;
 
@@ -35,12 +38,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 /**
+ * search device activity
  * Created by Admin
  * Date 2023/2/3
  *
  * @author Admin
  */
-public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickListener,OnItemClickListener {
+public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickListener, OnItemClickListener {
 
     private Button scanBtn;
     private RecyclerView recyclerView;
@@ -51,12 +55,12 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
     private BluetoothAdapter bluetoothAdapter;
 
 
-    private final Handler handler = new Handler(Looper.myLooper()){
+    private final Handler handler = new Handler(Looper.myLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
             super.handleMessage(msg);
-            if(msg.what == 0x00){
-                BaseApplication.getBaseApplication().getBleOperate().stopScanDevice();
+            if (msg.what == 0x00) {
+                BleOperateManager.getInstance().stopScanDevice();
             }
         }
     };
@@ -90,6 +94,24 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
 
     }
 
+    /**
+     * The bluetooth is on or off
+     */
+    private boolean isOpenBluetooth() {
+        bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        if (bluetoothManager == null) {
+            return false;
+        }
+
+        bluetoothAdapter = bluetoothManager.getAdapter();
+        if (bluetoothAdapter == null) {
+            return false;
+        }
+
+        return bluetoothAdapter.isEnabled();
+
+    }
+
 
     @SuppressLint("MissingPermission")
     private void initBle() {
@@ -99,26 +121,29 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
         bluetoothAdapter = bluetoothManager.getAdapter();
         if (bluetoothAdapter == null)
             return;
-        if (!bluetoothAdapter.isEnabled())
-            openBletooth();
+        if (!bluetoothAdapter.isEnabled()){
+            openBluetooth();
+        }
 
     }
 
-    private void openBletooth() {
+    /**
+     * open the bluetooth
+     */
+    private void openBluetooth() {
         try {
-            // 请求打开 Bluetooth
+            // open Bluetooth
             Intent requestBluetoothOn = new Intent(
                     BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            // 设置 Bluetooth 设备可以被其它 Bluetooth 设备扫描到
+            // Set the device to be scanned by other Bluetooth devices
             requestBluetoothOn
                     .setAction(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            // 设置 Bluetooth 设备可见时间
+            // set Bluetooth visible time
             requestBluetoothOn.putExtra(
                     BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION,
                     30 * 1000);
-            // 请求开启 Bluetooth
-            startActivityForResult(requestBluetoothOn,
-                    1001);
+            // open the  Bluetooth
+            startActivityForResult(requestBluetoothOn, 1001);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -126,12 +151,35 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
 
     @Override
     public void onClick(View view) {
-        //开始或停止搜索
+        //start or end scanner device
         if (view.getId() == R.id.scanBtn) {
             startScanDevice();
         }
     }
 
+    /**
+     * The location permission is on or off. If it is not open, request the location permission
+     */
+    private void requestLocationPermission() {
+        boolean isPermission = ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        if (!isPermission) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 0x00);
+        }
+    }
+
+    /**
+     * get location permission back
+     *
+     * @param requestCode  requestCode
+     * @param permissions  permission
+     * @param grantResults is successful
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+    }
 
     //get bluetooth and local permission
     private void getPermission() {
@@ -152,7 +200,7 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            XXPermissions.with(ScanDeviceActivity.this).permission(  Manifest.permission.BLUETOOTH_CONNECT,
+            XXPermissions.with(ScanDeviceActivity.this).permission(Manifest.permission.BLUETOOTH_CONNECT,
                     Manifest.permission.BLUETOOTH_SCAN,
                     Manifest.permission.BLUETOOTH_ADVERTISE).request(new OnPermissionCallback() {
                 @Override
@@ -165,7 +213,7 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
     }
 
 
-    //开始搜索
+    //start scanner device
     private void startScanDevice() {
 
 
@@ -174,15 +222,30 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN}, 0x01);
         }
-        BaseApplication.getBaseApplication().getBleOperate().scanBleDevice(new SearchResponse() {
+
+        BleOperateManager.getInstance().scanBleDevice(new SearchResponse() {
+
+            /**
+             *
+             * search started
+             */
             @Override
             public void onSearchStarted() {
-                scanBtn.setText("検索を開始");
+                scanBtn.setText("search started");
             }
 
+            /**
+             *
+             * device founded
+             *
+             * @param searchResult class
+             * public BluetoothDevice device;
+             *     public int rssi;
+             *     public byte[] scanRecord;
+             */
             @Override
             public void onDeviceFounded(SearchResult searchResult) {
-                scanBtn.setText("検索中..");
+                scanBtn.setText("scanner..");
                 if (TextUtils.isEmpty(searchResult.getName()) || searchResult.getName().equals("NULL"))
                     return;
                 if (!list.contains(searchResult)) {
@@ -191,14 +254,22 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
                 }
             }
 
+            /**
+             *
+             * search stopped
+             */
             @Override
             public void onSearchStopped() {
-                scanBtn.setText("検索完了");
+                scanBtn.setText("scanner stop");
             }
 
+            /**
+             *
+             * search  canceled
+             */
             @Override
             public void onSearchCanceled() {
-                scanBtn.setText("検索を閉じる");
+                scanBtn.setText("scanner complete");
             }
         }, 15 * 1000, 1);
     }
@@ -207,21 +278,45 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
     public void onIteClick(int position) {
         String bleName = list.get(position).getName();
         String bleMac = list.get(position).getAddress();
-        if(TextUtils.isEmpty(bleMac)){
+        if (TextUtils.isEmpty(bleMac)) {
             return;
         }
-        handler.sendEmptyMessageDelayed(0x00,100);
-        showDialog("接続中..");
-        BaseApplication.getBaseApplication().getBleOperate().connYakDevice(bleName, bleMac, new ConnStatusListener() {
+        handler.sendEmptyMessageDelayed(0x00, 100);
+        showDialog("connecting..");
+
+        /**
+         * set the connect status listener
+         */
+        BleOperateManager.getInstance().setBleConnStatusListener(new BleConnStatusListener() {
+            @Override
+            public void onConnectStatusChanged(String mac, int status) {
+                if(status == Constants.STATUS_CONNECTED){ //connect successful
+
+                }
+                if(status == Constants.STATUS_DISCONNECTED){    //disconnected
+
+                }
+            }
+        });
+
+        /**
+         * connect to device
+         */
+        BleOperateManager.getInstance().connYakDevice(bleName, bleMac, new ConnStatusListener() {
             @Override
             public void connStatus(int i) {
 
             }
 
+            /**
+             * connection success
+             *
+             */
             @Override
             public void setNoticeStatus(int i) {
+
                 dismissDialog();
-                BleSpUtils.put(ScanDeviceActivity.this,"conn_ble_mac",bleMac);
+                BleSpUtils.put(ScanDeviceActivity.this, "conn_ble_mac", bleMac);
                 finish();
             }
         });

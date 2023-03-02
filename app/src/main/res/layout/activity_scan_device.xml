@@ -15,9 +15,10 @@
         android:layout_width="match_parent"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
+        android:textAllCaps="false"
         android:layout_marginTop="20dp"
         android:layout_height="wrap_content"
-        android:text="検索を開始"/>
+        android:text="start search"/>
 
 
     <androidx.recyclerview.widget.RecyclerView

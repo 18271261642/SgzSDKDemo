@@ -3,15 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.sgzapp.sgzsdkdemo">
 
-    <!--位置权限-->
+
+
+    <!--LOCATION PERMISSION-->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
     <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <!--Android 12需添加BLUETOOTH_CONNECT权限-->
+    <!--Above Android 12 BLUETOOTH_CONNECT-->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-feature android:name="android.hardware.bluetooth_le"/>
+    <uses-feature android:name="android.hardware.bluetooth"/>
+
 
     <application
         android:name="com.sgzapp.sgzsdkdemo.BaseApplication"
@@ -34,6 +39,7 @@
             </intent-filter>
         </activity>
 
+        <!--search device activity-->
         <activity android:name=".ScanDeviceActivity"
             android:screenOrientation="portrait"/>
     </application>

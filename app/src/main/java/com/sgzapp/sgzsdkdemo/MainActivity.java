@@ -14,6 +14,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.blala.blalable.BleConstant;
+import com.blala.blalable.BleOperateManager;
 import com.blala.blalable.BleSpUtils;
 import com.blala.blalable.Utils;
 import com.blala.blalable.listener.BleConnStatusListener;
@@ -64,11 +65,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onResume() {
         super.onResume();
 
-        BaseApplication.getBaseApplication().getBleOperate().setBleConnStatusListener(new BleConnStatusListener() {
+        /**
+         * set device connected status listener
+         */
+        BleOperateManager.getInstance().setBleConnStatusListener(new BleConnStatusListener() {
             @Override
             public void onConnectStatusChanged(String s, int i) {
-                Log.e(TAG,"------连接状态="+s+" "+i);
-                connStatusTv.setText(i == Constants.STATUS_CONNECTED ? "接続成功" : "接続切断");
+                connStatusTv.setText(i == Constants.STATUS_CONNECTED ? "connected" : "not connected");
             }
         });
 
@@ -80,38 +83,67 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initData(){
 
-        //register connected status broadcastreceiver
+        //register connected status broadcast receiver
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BleConstant.BLE_CONNECTED_ACTION);
         intentFilter.addAction(BleConstant.BLE_DIS_CONNECT_ACTION);
         registerReceiver(broadcastReceiver,intentFilter);
 
+        /**
+         * Observe the data measured by the equipment
+         */
+        BleOperateManager.getInstance().setMeasureDataListener(new OnMeasureDataListener() {
 
-        BaseApplication.getBaseApplication().getBleOperate().setMeasureDataListener(new OnMeasureDataListener() {
+            /**
+             *  real step data
+             * @param stepValue  step
+             * @param distanceValue  distance  m
+             * @param kcalValue  calorie  kcal
+             */
             @Override
-            public void onRealStepData(int i, int i1, int i2) {
-                showLogTv.setText("ステップ数: "+i+"\n"+"きょり: "+i1+"\n"+"カロリー： "+i2);
+            public void onRealStepData(int stepValue, int distanceValue, int kcalValue) {
+                showLogTv.setText("step value: "+stepValue+"\n"+"distance: "+distanceValue+"\n"+"calorie： "+kcalValue);
             }
 
+            /**
+             *   measure heart rate value
+             * @param heartValue   heart value
+             * @param time  measure time
+             */
             @Override
-            public void onMeasureHeart(int i, long l) {
-                showLogTv.setText("心拍数: "+i);
+            public void onMeasureHeart(int heartValue,long time) {
+                showLogTv.setText("heart rate value: "+heartValue);
             }
 
+            /**
+             *  measure blood pressure
+             * @param sBp  systolic pressure
+             * @param disBp   diastolic pressure
+             * @param time  measure time
+             */
             @Override
-            public void onMeasureBp(int i, int i1, long l) {
+            public void onMeasureBp(int sBp,int disBp,long time) {
 
             }
 
+            /**
+             *  measure blood oxygen
+             * @param spo2Value     blood oxygen value
+             * @param time  measure time
+             */
             @Override
-            public void onMeasureSpo2(int i, long l) {
-                showLogTv.setText("血中酸素: "+i);
+            public void onMeasureSpo2(int spo2Value, long time) {
+                showLogTv.setText("blood oxygen value: "+spo2Value);
             }
 
+            /**
+             *  measure temperature value
+             * @param temperatureValue   temperature value need division 10
+             */
             @Override
-            public void onMeasureTemp(int i) {
-                float tttT = (float) CalculateUtils.div(i,10,1);
-                showLogTv.setText("体温: "+tttT+"℃");
+            public void onMeasureTemp(int temperatureValue) {
+                float tttT = (float) CalculateUtils.div(temperatureValue,10,1);
+                showLogTv.setText("temperature: "+tttT+"℃");
             }
         });
     }
@@ -142,20 +174,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(view.getId() == R.id.disconnectBtn){
             BleSpUtils.put(this,"conn_ble_mac","");
             BaseApplication.getBaseApplication().getBleOperate().disConnYakDevice();
-            connStatusTv.setText("接続が切断されました");
+            connStatusTv.setText("not disconnect");
             showLogTv.setText("");
         }
 
         //find device
         if(view.getId() == R.id.findDeviceTv){
-            BaseApplication.getBaseApplication().getBleOperate().findTimeBoatDevice();
+            BleOperateManager.getInstance().findTimeBoatDevice();
         }
         //sync time
         if(view.getId() == R.id.syncTimeBtn){
             BaseApplication.getBaseApplication().getBleOperate().syncDeviceTime(new WriteBackDataListener() {
                 @Override
                 public void backWriteData(byte[] bytes) {
-                    showLogTv.setText("時間が同期されました: "+formatTime());
+                    showLogTv.setText("sync time to device: "+formatTime());
                 }
             });
         }
@@ -176,17 +208,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         unregisterReceiver(broadcastReceiver);
     }
 
+    /**
+     * broadcast receiver for device connect status
+     */
     private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             //connected
             if(action.equals(BleConstant.BLE_CONNECTED_ACTION)){
-                showLogTv.setText("デバイスが接続されています ");
+                showLogTv.setText("Connection succeeded ");
             }
             //dis connected
             if(action.equals(BleConstant.BLE_DIS_CONNECT_ACTION)){
-                showLogTv.setText("デバイスが接続されていません");
+                showLogTv.setText("Connection disconnected");
             }
         }
     };
