@@ -321,4 +321,10 @@ public class ScanDeviceActivity extends SDKBaseActivity implements View.OnClickL
             }
         });
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        BleOperateManager.getInstance().stopScanDevice();
+    }
 }

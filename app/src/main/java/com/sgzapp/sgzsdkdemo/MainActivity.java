@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         //sync time
         if(view.getId() == R.id.syncTimeBtn){
-            BaseApplication.getBaseApplication().getBleOperate().syncDeviceTime(new WriteBackDataListener() {
+            BleOperateManager.getInstance().syncDeviceTime(new WriteBackDataListener() {
                 @Override
                 public void backWriteData(byte[] bytes) {
                     showLogTv.setText("sync time to device: "+formatTime());
